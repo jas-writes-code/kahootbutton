@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Host View</title>
+  <style>
+    body { margin: 0; background: black; overflow: hidden; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+  </style>
+</head>
+<body>
+<div id="error" style="position:absolute; top:0; left:0; right:0; background:red; color:white; text-align:center; padding:10px; z-index:9999; display:none;">
+  Connection failed. Is the server online?
+</div>
+
+<canvas id="canvas"></canvas>
+<script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+<script>
+const socket = io('http://77.56.213.9:3000');
+socket.emit('join-as-host');
+
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let dots = {};
+
+socket.on('update', clients => {
+  dots = clients;
+});
+
+let flashQueue = {};
+socket.on('flash', id => {
+  flashQueue[id] = Date.now();
+});
+
+socket.on('flash-end', id => {
+  delete flashQueue[id];
+});
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const [id, {x, y}] of Object.entries(dots)) {
+    const cx = x * canvas.width;
+    const cy = y * canvas.height;
+
+    const isFlashing = flashQueue[id] && (Date.now() - flashQueue[id] < 500);
+    ctx.fillStyle = isFlashing ? 'lime' : 'white';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
